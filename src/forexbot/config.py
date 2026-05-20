@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import math
 from pathlib import Path
 from typing import Any
 
@@ -106,7 +107,7 @@ def load_config(path: Path) -> BotConfig:
 
     market_data = MarketDataConfig(
         provider=provider,
-        path=Path(str(_required(market_data_raw, "path"))),
+        path=Path(_non_empty_string(market_data_raw, "path", "market_data.path")),
     )
 
     symbols_raw = _required(root, "symbols")
@@ -129,13 +130,21 @@ def _symbol_config(raw: Any, index: int) -> SymbolConfig:
     if not isinstance(name, str) or not name or name != name.upper():
         raise ConfigError("symbol.name must be uppercase and non-empty")
 
+    min_volume = _positive_float(symbol, "min_volume")
+    max_volume = _positive_float(symbol, "max_volume")
+    volume_step = _positive_float(symbol, "volume_step")
+    if min_volume > max_volume:
+        raise ConfigError("min_volume must be <= max_volume")
+    if volume_step > max_volume - min_volume:
+        raise ConfigError("volume_step must be <= max_volume - min_volume")
+
     return SymbolConfig(
         name=name,
         point=_positive_float(symbol, "point"),
         point_value_per_lot=_positive_float(symbol, "point_value_per_lot"),
-        min_volume=_positive_float(symbol, "min_volume"),
-        max_volume=_positive_float(symbol, "max_volume"),
-        volume_step=_positive_float(symbol, "volume_step"),
+        min_volume=min_volume,
+        max_volume=max_volume,
+        volume_step=volume_step,
     )
 
 
@@ -156,9 +165,16 @@ def _positive_float(mapping: dict[str, Any], key: str) -> float:
     if not isinstance(value, int | float) or isinstance(value, bool):
         raise ConfigError(f"{key} must be a positive number")
     numeric = float(value)
-    if numeric <= 0:
+    if not math.isfinite(numeric) or numeric <= 0:
         raise ConfigError(f"{key} must be positive")
     return numeric
+
+
+def _non_empty_string(mapping: dict[str, Any], key: str, error_name: str) -> str:
+    value = _required(mapping, key)
+    if not isinstance(value, str) or not value:
+        raise ConfigError(f"{error_name} must be a non-empty string")
+    return value
 
 
 def _bounded_positive_float(mapping: dict[str, Any], key: str, upper_limit: float) -> float:

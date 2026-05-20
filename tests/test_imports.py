@@ -1,5 +1,7 @@
+import os
 import subprocess
 import sys
+from pathlib import Path
 
 import forexbot
 
@@ -9,10 +11,17 @@ def test_package_exposes_version():
 
 
 def test_module_entrypoint_shows_help():
+    src_path = Path(__file__).resolve().parents[1] / "src"
+    env = os.environ.copy()
+    env["PYTHONPATH"] = os.pathsep.join(
+        path for path in (str(src_path), env.get("PYTHONPATH", "")) if path
+    )
+
     result = subprocess.run(
         [sys.executable, "-m", "forexbot", "--help"],
         check=False,
         capture_output=True,
+        env=env,
         text=True,
     )
 

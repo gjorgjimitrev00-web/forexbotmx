@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from forexbot.models import AccountState, OrderResult, TradeIntent
+from forexbot.models import AccountState, OrderResult, Position, TradeIntent
 
 
 class Broker(Protocol):
@@ -23,6 +23,17 @@ class PaperBroker:
             equity=self.starting_equity,
             balance=self.starting_equity,
             daily_realized_pnl=0,
+            open_positions=tuple(
+                Position(
+                    symbol=order.symbol,
+                    side=order.side,
+                    volume=order.volume,
+                    entry_price=order.entry_price,
+                    stop_loss=order.stop_loss,
+                    opened_at=order.candle_time,
+                )
+                for order in self.orders
+            ),
         )
 
     def place_order(self, intent: TradeIntent) -> OrderResult:

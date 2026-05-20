@@ -13,6 +13,9 @@ class MT5Broker:
         self._mt5 = None
 
     def connect(self) -> None:
+        self.connected = False
+        self._mt5 = None
+
         try:
             import MetaTrader5 as mt5
         except ImportError as exc:

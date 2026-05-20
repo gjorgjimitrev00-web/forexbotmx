@@ -17,7 +17,7 @@ Open PowerShell in the project directory:
 ```powershell
 py -3.11 -m venv .venv
 .\.venv\Scripts\Activate.ps1
-py -m pip install -e ".[dev,mt5]"
+python -m pip install -e ".[dev,mt5]"
 forexbot check-config configs\paper.yaml
 ```
 

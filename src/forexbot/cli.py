@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import argparse
+from pathlib import Path
+
+from forexbot.config import ConfigError, load_config
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -23,5 +26,16 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
-    print(f"{args.command} command is available; engine wiring is added in Task 8.")
+
+    try:
+        config = load_config(Path(args.config))
+    except (ConfigError, OSError, KeyError, ValueError) as exc:
+        print(f"config error: {exc}")
+        return 2
+
+    if args.command == "check-config":
+        print(f"OK: {args.config} mode={config.mode} symbols={len(config.symbols)}")
+        return 0
+
+    print(f"{args.command} command is available for mode={config.mode}; engine wiring is added in Task 8.")
     return 0

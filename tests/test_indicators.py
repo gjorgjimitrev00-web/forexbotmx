@@ -1,5 +1,7 @@
 from datetime import datetime, timezone
 
+import pytest
+
 from forexbot.indicators import atr, sma
 from forexbot.models import Candle
 
@@ -32,4 +34,4 @@ def test_atr_uses_true_range_average():
         candle(1.1090, 1.1040, 1.1050),
     ]
 
-    assert atr(candles, 2) == 0.006
+    assert atr(candles, 2) == pytest.approx(0.006)

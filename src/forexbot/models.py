@@ -45,6 +45,9 @@ class TradeIntent:
     reason: str
     candle_time: datetime
 
+    def __post_init__(self) -> None:
+        _validate_tradeable_side(self.side)
+
 
 @dataclass(frozen=True)
 class Position:
@@ -54,6 +57,9 @@ class Position:
     entry_price: float
     stop_loss: float
     opened_at: datetime
+
+    def __post_init__(self) -> None:
+        _validate_tradeable_side(self.side)
 
 
 @dataclass(frozen=True)
@@ -69,3 +75,8 @@ class OrderResult:
     accepted: bool
     order_id: str | None
     message: str
+
+
+def _validate_tradeable_side(side: Side) -> None:
+    if side not in {Side.BUY, Side.SELL}:
+        raise ValueError("side must be buy or sell")

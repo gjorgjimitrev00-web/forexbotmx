@@ -1,4 +1,6 @@
 from datetime import datetime, timedelta, timezone
+from dataclasses import replace
+import math
 
 from forexbot.config import StrategyConfig, SymbolConfig
 from forexbot.models import Candle, Side
@@ -81,3 +83,62 @@ def test_holds_when_spread_is_too_high():
 
     assert signal.side == Side.HOLD
     assert "spread" in signal.reason
+
+
+def test_holds_when_spread_is_nan():
+    strategy = TrendFollowingStrategy(config())
+    m15 = make_candles("EURUSD", "M15", 1.1000, 0.0010, 12)
+    h1 = make_candles("EURUSD", "H1", 1.0900, 0.0020, 12)
+
+    signal = strategy.evaluate(symbol(), m15=m15, h1=h1, spread_points=math.nan)
+
+    assert signal.side == Side.HOLD
+    assert "invalid spread" in signal.reason
+
+
+def test_holds_when_spread_is_negative():
+    strategy = TrendFollowingStrategy(config())
+    m15 = make_candles("EURUSD", "M15", 1.1000, 0.0010, 12)
+    h1 = make_candles("EURUSD", "H1", 1.0900, 0.0020, 12)
+
+    signal = strategy.evaluate(symbol(), m15=m15, h1=h1, spread_points=-1)
+
+    assert signal.side == Side.HOLD
+    assert "invalid spread" in signal.reason
+
+
+def test_holds_when_candle_data_is_not_finite():
+    strategy = TrendFollowingStrategy(config())
+    m15 = make_candles("EURUSD", "M15", 1.1000, 0.0010, 12)
+    m15[-1] = replace(m15[-1], close=math.nan)
+    h1 = make_candles("EURUSD", "H1", 1.0900, 0.0020, 12)
+
+    signal = strategy.evaluate(symbol(), m15=m15, h1=h1, spread_points=10)
+
+    assert signal.side == Side.HOLD
+    assert "invalid market data" in signal.reason
+
+
+def test_holds_when_m15_and_h1_disagree():
+    strategy = TrendFollowingStrategy(config())
+    m15 = make_candles("EURUSD", "M15", 1.1000, 0.0010, 12)
+    h1 = make_candles("EURUSD", "H1", 1.1400, -0.0020, 12)
+
+    signal = strategy.evaluate(symbol(), m15=m15, h1=h1, spread_points=10)
+
+    assert signal.side == Side.HOLD
+    assert signal.reason == "trend confirmation failed"
+
+
+def test_holds_when_volatility_is_zero():
+    strategy = TrendFollowingStrategy(config())
+    m15 = [
+        replace(candle, open=1.1000, high=1.1000, low=1.1000, close=1.1000)
+        for candle in make_candles("EURUSD", "M15", 1.1000, 0, 12)
+    ]
+    h1 = make_candles("EURUSD", "H1", 1.0900, 0.0020, 12)
+
+    signal = strategy.evaluate(symbol(), m15=m15, h1=h1, spread_points=10)
+
+    assert signal.side == Side.HOLD
+    assert "invalid market data" in signal.reason

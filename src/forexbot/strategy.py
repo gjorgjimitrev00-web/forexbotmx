@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import math
+
 from forexbot import indicators
 from forexbot.config import StrategyConfig, SymbolConfig
 from forexbot.models import Candle, Side, Signal
@@ -17,6 +19,9 @@ class TrendFollowingStrategy:
         h1: list[Candle],
         spread_points: float,
     ) -> Signal:
+        if not math.isfinite(spread_points) or spread_points < 0:
+            return Signal(symbol=symbol.name, side=Side.HOLD, reason="invalid spread")
+
         if spread_points > self.config.max_spread_points:
             return Signal(symbol=symbol.name, side=Side.HOLD, reason="spread too high")
 
@@ -31,6 +36,14 @@ class TrendFollowingStrategy:
 
         latest = m15[-1]
         prior = m15[-2]
+        if not _candles_have_finite_prices(m15) or not _candles_have_finite_prices(h1):
+            return Signal(
+                symbol=symbol.name,
+                side=Side.HOLD,
+                reason="invalid market data",
+                candle_time=latest.time,
+            )
+
         m15_closes = [candle.close for candle in m15]
         h1_closes = [candle.close for candle in h1]
 
@@ -46,12 +59,13 @@ class TrendFollowingStrategy:
             or h1_fast is None
             or h1_slow is None
             or volatility is None
+            or not _finite_values(m15_fast, m15_slow, h1_fast, h1_slow, volatility)
             or volatility <= 0
         ):
             return Signal(
                 symbol=symbol.name,
                 side=Side.HOLD,
-                reason="indicators unavailable",
+                reason="invalid market data",
                 candle_time=latest.time,
             )
 
@@ -60,24 +74,42 @@ class TrendFollowingStrategy:
         stop_distance = volatility * self.config.atr_stop_multiplier
 
         if trend_up:
+            stop_loss = latest.close - stop_distance
+            take_profit = latest.close + (stop_distance * self.config.take_profit_r_multiple)
+            if not _finite_values(latest.close, stop_loss, take_profit):
+                return Signal(
+                    symbol=symbol.name,
+                    side=Side.HOLD,
+                    reason="invalid market data",
+                    candle_time=latest.time,
+                )
             return Signal(
                 symbol=symbol.name,
                 side=Side.BUY,
                 reason="M15 and H1 trend up",
                 entry_price=latest.close,
-                stop_loss=latest.close - stop_distance,
-                take_profit=latest.close + (stop_distance * self.config.take_profit_r_multiple),
+                stop_loss=stop_loss,
+                take_profit=take_profit,
                 candle_time=latest.time,
             )
 
         if trend_down:
+            stop_loss = latest.close + stop_distance
+            take_profit = latest.close - (stop_distance * self.config.take_profit_r_multiple)
+            if not _finite_values(latest.close, stop_loss, take_profit):
+                return Signal(
+                    symbol=symbol.name,
+                    side=Side.HOLD,
+                    reason="invalid market data",
+                    candle_time=latest.time,
+                )
             return Signal(
                 symbol=symbol.name,
                 side=Side.SELL,
                 reason="M15 and H1 trend down",
                 entry_price=latest.close,
-                stop_loss=latest.close + stop_distance,
-                take_profit=latest.close - (stop_distance * self.config.take_profit_r_multiple),
+                stop_loss=stop_loss,
+                take_profit=take_profit,
                 candle_time=latest.time,
             )
 
@@ -87,3 +119,14 @@ class TrendFollowingStrategy:
             reason="trend confirmation failed",
             candle_time=latest.time,
         )
+
+
+def _candles_have_finite_prices(candles: list[Candle]) -> bool:
+    return all(
+        _finite_values(candle.open, candle.high, candle.low, candle.close)
+        for candle in candles
+    )
+
+
+def _finite_values(*values: float) -> bool:
+    return all(math.isfinite(value) for value in values)

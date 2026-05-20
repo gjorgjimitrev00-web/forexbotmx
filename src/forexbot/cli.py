@@ -48,15 +48,24 @@ def main(argv: list[str] | None = None) -> int:
             print("run requires --once in V1")
             return 2
 
-        summary = _build_engine(config, "journals/paper.jsonl").run_once()
-        print(f"paper summary: {summary}")
-        return 0
+        return _run_engine(config, "journals/paper.jsonl", "paper summary")
 
     if args.command == "backtest":
-        summary = _build_engine(config, "journals/backtest.jsonl").run_once()
-        print(f"backtest summary: {summary}")
-        return 0
+        return _run_engine(config, "journals/backtest.jsonl", "backtest summary")
 
+    return 0
+
+
+def _run_engine(config: BotConfig, journal_path: str, summary_label: str) -> int:
+    try:
+        summary = _build_engine(config, journal_path).run_once()
+    except (OSError, KeyError, ValueError) as exc:
+        print(f"runtime error: {exc}")
+        return 1
+
+    print(f"{summary_label}: {summary}")
+    if summary["errors"] > 0:
+        return 1
     return 0
 
 

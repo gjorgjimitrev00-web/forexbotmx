@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from decimal import Decimal, ROUND_DOWN
+from math import isfinite
 
 from forexbot.config import RiskConfig, SymbolConfig
 from forexbot.models import AccountState, Side, Signal, TradeIntent
@@ -29,6 +30,24 @@ class RiskManager:
             or signal.candle_time is None
         ):
             return RiskDecision(False, "signal is missing required order prices")
+
+        if not all(
+            isfinite(value)
+            for value in (
+                signal.entry_price,
+                signal.stop_loss,
+                signal.take_profit,
+                account.equity,
+                account.daily_realized_pnl,
+            )
+        ):
+            return RiskDecision(False, "signal or account contains non-finite value")
+
+        if signal.side == Side.BUY and not (signal.stop_loss < signal.entry_price < signal.take_profit):
+            return RiskDecision(False, "invalid buy price direction")
+
+        if signal.side == Side.SELL and not (signal.take_profit < signal.entry_price < signal.stop_loss):
+            return RiskDecision(False, "invalid sell price direction")
 
         if len(account.open_positions) >= self.config.max_open_trades:
             return RiskDecision(False, "max open trades reached")

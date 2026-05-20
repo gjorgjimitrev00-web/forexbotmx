@@ -1,4 +1,8 @@
+from dataclasses import replace
 from datetime import datetime, timezone
+from math import inf, nan
+
+import pytest
 
 from forexbot.config import RiskConfig, SymbolConfig
 from forexbot.models import AccountState, Position, Side, Signal
@@ -33,6 +37,18 @@ def buy_signal() -> Signal:
         entry_price=1.1050,
         stop_loss=1.1000,
         take_profit=1.1150,
+        candle_time=datetime(2026, 5, 20, tzinfo=timezone.utc),
+    )
+
+
+def sell_signal() -> Signal:
+    return Signal(
+        symbol="EURUSD",
+        side=Side.SELL,
+        reason="test",
+        entry_price=1.1050,
+        stop_loss=1.1100,
+        take_profit=1.0950,
         candle_time=datetime(2026, 5, 20, tzinfo=timezone.utc),
     )
 
@@ -74,6 +90,51 @@ def test_sizes_position_rounds_down_to_volume_step_multiple():
     assert decision.allowed is True
     assert decision.intent is not None
     assert decision.intent.volume == 0.5
+
+
+@pytest.mark.parametrize("non_finite", [nan, inf])
+@pytest.mark.parametrize("field", ["entry_price", "stop_loss", "take_profit"])
+def test_blocks_non_finite_signal_prices(field: str, non_finite: float):
+    manager = RiskManager(risk())
+    account = AccountState(equity=10000, balance=10000, daily_realized_pnl=0)
+    signal = replace(buy_signal(), **{field: non_finite})
+
+    decision = manager.evaluate(symbol(), account, signal)
+
+    assert decision.allowed is False
+    assert "non-finite" in decision.reason
+
+
+@pytest.mark.parametrize("non_finite", [nan, inf])
+@pytest.mark.parametrize("field", ["equity", "daily_realized_pnl"])
+def test_blocks_non_finite_account_values(field: str, non_finite: float):
+    manager = RiskManager(risk())
+    account = AccountState(equity=10000, balance=10000, daily_realized_pnl=0)
+    account = replace(account, **{field: non_finite})
+
+    decision = manager.evaluate(symbol(), account, buy_signal())
+
+    assert decision.allowed is False
+    assert "non-finite" in decision.reason
+
+
+@pytest.mark.parametrize(
+    ("signal", "expected_reason"),
+    [
+        (replace(buy_signal(), stop_loss=1.1060), "buy price direction"),
+        (replace(buy_signal(), take_profit=1.1040), "buy price direction"),
+        (replace(sell_signal(), stop_loss=1.1040), "sell price direction"),
+        (replace(sell_signal(), take_profit=1.1060), "sell price direction"),
+    ],
+)
+def test_blocks_invalid_stop_and_target_direction(signal: Signal, expected_reason: str):
+    manager = RiskManager(risk())
+    account = AccountState(equity=10000, balance=10000, daily_realized_pnl=0)
+
+    decision = manager.evaluate(symbol(), account, signal)
+
+    assert decision.allowed is False
+    assert expected_reason in decision.reason
 
 
 def test_blocks_when_daily_loss_limit_reached():

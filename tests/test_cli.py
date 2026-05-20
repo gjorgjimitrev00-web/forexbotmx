@@ -33,6 +33,17 @@ def _write_temp_config(
     return target
 
 
+def _write_temp_config_with_mode(tmp_path: Path, config_name: str, mode: str) -> Path:
+    config_path = _write_temp_config(tmp_path, config_name)
+    config_text = config_path.read_text(encoding="utf-8")
+    source_mode = config_name.removesuffix(".yaml")
+    config_path.write_text(
+        config_text.replace(f"mode: {source_mode}", f"mode: {mode}"),
+        encoding="utf-8",
+    )
+    return config_path
+
+
 def _run_cli(args: list[str], tmp_path: Path) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         [sys.executable, "-m", "forexbot", *args],
@@ -63,6 +74,28 @@ def test_run_once_command_succeeds(tmp_path):
     assert (tmp_path / "journals" / "paper.jsonl").exists()
 
 
+def test_run_rejects_mt5_demo_mode_without_traceback(tmp_path):
+    config_path = _write_temp_config_with_mode(tmp_path, "paper.yaml", "mt5_demo")
+
+    result = _run_cli(["run", "--config", str(config_path), "--once"], tmp_path)
+
+    assert result.returncode != 0
+    assert "MT5 demo execution is disabled in V1" in result.stdout
+    assert "Traceback" not in result.stdout
+    assert "Traceback" not in result.stderr
+
+
+def test_run_rejects_backtest_mode_without_traceback(tmp_path):
+    config_path = _write_temp_config(tmp_path, "backtest.yaml")
+
+    result = _run_cli(["run", "--config", str(config_path), "--once"], tmp_path)
+
+    assert result.returncode != 0
+    assert "run requires mode=paper" in result.stdout
+    assert "Traceback" not in result.stdout
+    assert "Traceback" not in result.stderr
+
+
 def test_backtest_command_succeeds(tmp_path):
     config_path = _write_temp_config(tmp_path, "backtest.yaml")
 
@@ -71,6 +104,28 @@ def test_backtest_command_succeeds(tmp_path):
     assert result.returncode == 0
     assert "backtest summary" in result.stdout
     assert (tmp_path / "journals" / "backtest.jsonl").exists()
+
+
+def test_backtest_rejects_mt5_demo_mode_without_traceback(tmp_path):
+    config_path = _write_temp_config_with_mode(tmp_path, "backtest.yaml", "mt5_demo")
+
+    result = _run_cli(["backtest", "--config", str(config_path)], tmp_path)
+
+    assert result.returncode != 0
+    assert "MT5 demo execution is disabled in V1" in result.stdout
+    assert "Traceback" not in result.stdout
+    assert "Traceback" not in result.stderr
+
+
+def test_backtest_rejects_paper_mode_without_traceback(tmp_path):
+    config_path = _write_temp_config(tmp_path, "paper.yaml")
+
+    result = _run_cli(["backtest", "--config", str(config_path)], tmp_path)
+
+    assert result.returncode != 0
+    assert "backtest requires mode=backtest" in result.stdout
+    assert "Traceback" not in result.stdout
+    assert "Traceback" not in result.stderr
 
 
 def test_run_reports_runtime_error_for_missing_market_data(tmp_path):

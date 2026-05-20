@@ -92,6 +92,17 @@ def test_sizes_position_rounds_down_to_volume_step_multiple():
     assert decision.intent.volume == 0.5
 
 
+def test_blocks_when_true_risk_size_is_below_minimum_volume():
+    manager = RiskManager(risk())
+    wide_stop_signal = replace(buy_signal(), stop_loss=0.1050)
+    account = AccountState(equity=1000, balance=1000, daily_realized_pnl=0)
+
+    decision = manager.evaluate(symbol(), account, wide_stop_signal)
+
+    assert decision.allowed is False
+    assert "below minimum" in decision.reason
+
+
 @pytest.mark.parametrize("non_finite", [nan, inf])
 @pytest.mark.parametrize("field", ["entry_price", "stop_loss", "take_profit"])
 def test_blocks_non_finite_signal_prices(field: str, non_finite: float):
@@ -106,7 +117,7 @@ def test_blocks_non_finite_signal_prices(field: str, non_finite: float):
 
 
 @pytest.mark.parametrize("non_finite", [nan, inf])
-@pytest.mark.parametrize("field", ["equity", "daily_realized_pnl"])
+@pytest.mark.parametrize("field", ["equity", "balance", "daily_realized_pnl"])
 def test_blocks_non_finite_account_values(field: str, non_finite: float):
     manager = RiskManager(risk())
     account = AccountState(equity=10000, balance=10000, daily_realized_pnl=0)

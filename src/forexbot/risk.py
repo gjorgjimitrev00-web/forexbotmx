@@ -38,6 +38,7 @@ class RiskManager:
                 signal.stop_loss,
                 signal.take_profit,
                 account.equity,
+                account.balance,
                 account.daily_realized_pnl,
             )
         ):
@@ -86,7 +87,7 @@ class RiskManager:
 
         risk_amount = equity * (self.config.risk_per_trade_pct / 100)
         raw_volume = risk_amount / (stop_points * symbol.point_value_per_lot)
-        bounded_volume = min(max(raw_volume, symbol.min_volume), symbol.max_volume)
+        bounded_volume = min(raw_volume, symbol.max_volume)
 
         step = Decimal(str(symbol.volume_step))
         steps = (Decimal(str(bounded_volume)) / step).to_integral_value(rounding=ROUND_DOWN)

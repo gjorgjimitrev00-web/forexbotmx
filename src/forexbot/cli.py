@@ -44,6 +44,11 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.command == "run":
+        mode_error = _mode_error(config.mode, "run", "paper")
+        if mode_error is not None:
+            print(mode_error)
+            return 2
+
         if not args.once:
             print("run requires --once in V1")
             return 2
@@ -51,9 +56,22 @@ def main(argv: list[str] | None = None) -> int:
         return _run_engine(config, "journals/paper.jsonl", "paper summary")
 
     if args.command == "backtest":
+        mode_error = _mode_error(config.mode, "backtest", "backtest")
+        if mode_error is not None:
+            print(mode_error)
+            return 2
+
         return _run_engine(config, "journals/backtest.jsonl", "backtest summary")
 
     return 0
+
+
+def _mode_error(mode: str, command: str, required_mode: str) -> str | None:
+    if mode == required_mode:
+        return None
+    if mode == "mt5_demo":
+        return f"{command} mode=mt5_demo is unsupported: MT5 demo execution is disabled in V1"
+    return f"{command} requires mode={required_mode}; got mode={mode}"
 
 
 def _run_engine(config: BotConfig, journal_path: str, summary_label: str) -> int:

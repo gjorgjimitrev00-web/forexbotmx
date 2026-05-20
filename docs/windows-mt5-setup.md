@@ -18,7 +18,7 @@ Open PowerShell in the project directory:
 py -3.11 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -e ".[dev,mt5]"
-forexbot check-config configs\paper.yaml
+forexbot check-config --config configs\paper.yaml
 ```
 
 ## Notes

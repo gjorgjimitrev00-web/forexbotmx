@@ -48,6 +48,34 @@ def test_sizes_position_from_risk_and_stop_distance():
     assert decision.intent.volume == 0.05
 
 
+def test_sizes_position_rounds_down_to_volume_step_multiple():
+    manager = RiskManager(risk())
+    stepped_symbol = SymbolConfig(
+        name="EURUSD",
+        point=0.0001,
+        point_value_per_lot=10,
+        min_volume=0.25,
+        max_volume=10,
+        volume_step=0.25,
+    )
+    signal = Signal(
+        symbol="EURUSD",
+        side=Side.BUY,
+        reason="test",
+        entry_price=1.1001,
+        stop_loss=1.1000,
+        take_profit=1.1010,
+        candle_time=datetime(2026, 5, 20, tzinfo=timezone.utc),
+    )
+    account = AccountState(equity=2520, balance=2520, daily_realized_pnl=0)
+
+    decision = manager.evaluate(stepped_symbol, account, signal)
+
+    assert decision.allowed is True
+    assert decision.intent is not None
+    assert decision.intent.volume == 0.5
+
+
 def test_blocks_when_daily_loss_limit_reached():
     manager = RiskManager(risk())
     account = AccountState(equity=10000, balance=10000, daily_realized_pnl=-100)

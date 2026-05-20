@@ -69,5 +69,7 @@ class RiskManager:
         raw_volume = risk_amount / (stop_points * symbol.point_value_per_lot)
         bounded_volume = min(max(raw_volume, symbol.min_volume), symbol.max_volume)
 
-        volume = Decimal(str(bounded_volume)).quantize(Decimal(str(symbol.volume_step)), rounding=ROUND_DOWN)
+        step = Decimal(str(symbol.volume_step))
+        steps = (Decimal(str(bounded_volume)) / step).to_integral_value(rounding=ROUND_DOWN)
+        volume = steps * step
         return float(volume)

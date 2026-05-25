@@ -10,3 +10,4 @@ logs/
 journals/
 .env
 mt5-secrets.yaml
+.DS_Store

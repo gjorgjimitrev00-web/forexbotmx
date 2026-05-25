@@ -52,6 +52,31 @@ def test_loads_paper_config():
     assert [symbol.name for symbol in config.symbols] == ["EURUSD", "GBPUSD", "USDJPY", "XAUUSD"]
 
 
+def test_loads_mt5_demo_config():
+    config = load_config(Path("configs/mt5_demo.yaml"))
+
+    assert config.mode == "mt5_demo"
+    assert config.mt5 is not None
+    assert config.mt5.account_number > 0
+    assert config.mt5.magic == 260526
+
+
+def test_mt5_modes_require_mt5_section(tmp_path):
+    path = tmp_path / "missing-mt5.yaml"
+    path.write_text(Path("configs/paper.yaml").read_text().replace("mode: paper", "mode: mt5_demo"), encoding="utf-8")
+
+    with pytest.raises(ConfigError, match="mt5 section is required"):
+        load_config(path)
+
+
+def test_loads_mt5_live_example_config():
+    config = load_config(Path("configs/mt5_live.example.yaml"))
+
+    assert config.mode == "mt5_live"
+    assert config.mt5 is not None
+    assert config.mt5.account_number > 0
+
+
 def test_rejects_live_mode(tmp_path):
     path = tmp_path / "bad.yaml"
     path.write_text(

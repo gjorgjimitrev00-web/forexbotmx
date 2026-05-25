@@ -52,6 +52,17 @@ class MarketDataConfig:
 
 
 @dataclass(frozen=True)
+class MT5Config:
+    account_number: int
+    terminal_path: Path | None
+    server: str | None
+    magic: int
+    deviation_points: int
+    order_comment: str
+    type_filling: str
+
+
+@dataclass(frozen=True)
 class BotConfig:
     mode: str
     account: AccountConfig
@@ -59,6 +70,7 @@ class BotConfig:
     strategy: StrategyConfig
     market_data: MarketDataConfig
     symbols: list[SymbolConfig]
+    mt5: MT5Config | None = None
 
 
 def load_config(path: Path) -> BotConfig:
@@ -68,8 +80,16 @@ def load_config(path: Path) -> BotConfig:
     mode = _required(root, "mode")
     if mode == "live":
         raise ConfigError("live trading is locked for V1")
-    if mode not in {"paper", "backtest", "mt5_demo"}:
-        raise ConfigError("mode must be paper, backtest, or mt5_demo")
+    if mode not in {"paper", "backtest", "mt5_demo", "mt5_live"}:
+        raise ConfigError("mode must be paper, backtest, mt5_demo, or mt5_live")
+
+    mt5 = None
+    if mode in {"mt5_demo", "mt5_live"}:
+        if "mt5" not in root:
+            raise ConfigError("MT5 demo execution is disabled in V1; mt5 section is required for mt5 modes")
+        mt5 = _mt5_config(root["mt5"])
+    elif "mt5" in root:
+        mt5 = _mt5_config(root["mt5"])
 
     account_raw = _mapping(_required(root, "account"), "account")
     risk_raw = _mapping(_required(root, "risk"), "risk")
@@ -121,6 +141,7 @@ def load_config(path: Path) -> BotConfig:
         strategy=strategy,
         market_data=market_data,
         symbols=[_symbol_config(symbol_raw, index) for index, symbol_raw in enumerate(symbols_raw)],
+        mt5=mt5,
     )
 
 
@@ -154,6 +175,25 @@ def _mapping(value: Any, name: str) -> dict[str, Any]:
     return value
 
 
+def _mt5_config(raw: Any) -> MT5Config:
+    mt5 = _mapping(raw, "mt5")
+    terminal_path = _optional_non_empty_string(mt5, "terminal_path", "mt5.terminal_path")
+    server = _optional_non_empty_string(mt5, "server", "mt5.server")
+    type_filling = _non_empty_string(mt5, "type_filling", "mt5.type_filling")
+    if type_filling not in {"RETURN", "IOC", "FOK"}:
+        raise ConfigError("mt5.type_filling must be RETURN, IOC, or FOK")
+
+    return MT5Config(
+        account_number=_positive_int(mt5, "account_number"),
+        terminal_path=Path(terminal_path) if terminal_path is not None else None,
+        server=server,
+        magic=_positive_int(mt5, "magic"),
+        deviation_points=_positive_int(mt5, "deviation_points"),
+        order_comment=_non_empty_string(mt5, "order_comment", "mt5.order_comment"),
+        type_filling=type_filling,
+    )
+
+
 def _required(mapping: dict[str, Any], key: str) -> Any:
     if key not in mapping:
         raise ConfigError(f"missing required config key: {key}")
@@ -172,6 +212,15 @@ def _positive_float(mapping: dict[str, Any], key: str) -> float:
 
 def _non_empty_string(mapping: dict[str, Any], key: str, error_name: str) -> str:
     value = _required(mapping, key)
+    if not isinstance(value, str) or not value:
+        raise ConfigError(f"{error_name} must be a non-empty string")
+    return value
+
+
+def _optional_non_empty_string(mapping: dict[str, Any], key: str, error_name: str) -> str | None:
+    value = mapping.get(key)
+    if value is None:
+        return None
     if not isinstance(value, str) or not value:
         raise ConfigError(f"{error_name} must be a non-empty string")
     return value

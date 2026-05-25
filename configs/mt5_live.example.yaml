@@ -1,0 +1,51 @@
+mode: mt5_live
+account:
+  starting_equity: 10000
+risk:
+  risk_per_trade_pct: 0.25
+  max_daily_loss_pct: 1.0
+  max_open_trades: 3
+  max_open_trades_per_symbol: 1
+strategy:
+  fast_sma: 20
+  slow_sma: 50
+  atr_period: 14
+  atr_stop_multiplier: 1.5
+  take_profit_r_multiple: 2.0
+  max_spread_points: 25
+market_data:
+  provider: json
+  path: data/sample_candles.json
+symbols:
+  - name: EURUSD
+    point: 0.0001
+    point_value_per_lot: 10
+    min_volume: 0.01
+    max_volume: 1.0
+    volume_step: 0.01
+  - name: GBPUSD
+    point: 0.0001
+    point_value_per_lot: 10
+    min_volume: 0.01
+    max_volume: 1.0
+    volume_step: 0.01
+  - name: USDJPY
+    point: 0.01
+    point_value_per_lot: 9
+    min_volume: 0.01
+    max_volume: 1.0
+    volume_step: 0.01
+  - name: XAUUSD
+    point: 0.01
+    point_value_per_lot: 1
+    min_volume: 0.01
+    max_volume: 1.0
+    volume_step: 0.01
+mt5:
+  account_number: 12345678
+  terminal_path: null
+  server: null
+  magic: 260526
+  deviation_points: 20
+  order_comment: forexbot-v2
+  type_filling: RETURN

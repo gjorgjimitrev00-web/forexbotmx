@@ -15,6 +15,21 @@ def test_status_reports_local_host_defaults(tmp_path):
     assert response.json()["host"] == "127.0.0.1"
 
 
+def test_dashboard_contains_control_panel_sections(tmp_path):
+    app = create_app(config_path=Path("configs/paper.yaml"), journal_path=tmp_path / "ui.jsonl")
+    client = TestClient(app)
+
+    response = client.get("/")
+
+    assert response.status_code == 200
+    body = response.text
+    assert "Mode" in body
+    assert "Risk" in body
+    assert "Symbols" in body
+    assert "Run One Cycle" in body
+    assert "MT5 Live" in body
+
+
 def test_check_config_endpoint(tmp_path):
     app = create_app(config_path=Path("configs/paper.yaml"), journal_path=tmp_path / "ui.jsonl")
     client = TestClient(app)

@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Forexbot Control Panel</title>
+    <link rel="stylesheet" href="/static/app.css">
+    <script src="/static/app.js" defer></script>
+  </head>
+  <body>
+    <header class="app-header">
+      <div>
+        <p class="eyebrow">Local operations</p>
+        <h1>Forexbot Control Panel</h1>
+      </div>
+      <div id="message-line" class="message-line" role="status" aria-live="polite">Loading dashboard</div>
+    </header>
+
+    <main class="dashboard-shell">
+      <section class="status-strip" aria-label="Runtime status">
+        <div>
+          <span>Mode</span>
+          <strong id="status-mode">--</strong>
+        </div>
+        <div>
+          <span>Host</span>
+          <strong id="status-host">--</strong>
+        </div>
+        <div>
+          <span>Last Summary</span>
+          <strong id="status-summary">No cycle run yet</strong>
+        </div>
+      </section>
+
+      <section class="warning-block" role="alert">
+        <strong>MT5 Live</strong>
+        <span>Live execution can place real orders. Verify account, server, risk, symbols, and terminal path before saving or running.</span>
+      </section>
+
+      <form id="config-form" class="panel-grid">
+        <section class="panel settings-panel">
+          <div class="panel-heading">
+            <h2>Config</h2>
+            <div class="button-row">
+              <button type="submit">Save Config</button>
+              <button type="button" id="check-config">Check Config</button>
+            </div>
+          </div>
+
+          <div class="field-grid">
+            <label>
+              <span>Mode</span>
+              <select name="mode">
+                <option value="paper">paper</option>
+                <option value="backtest">backtest</option>
+                <option value="mt5_demo">mt5_demo</option>
+                <option value="mt5_live">mt5_live</option>
+              </select>
+            </label>
+            <label>
+              <span>Starting Equity</span>
+              <input name="account.starting_equity" type="number" min="0" step="0.01">
+            </label>
+            <label>
+              <span>Risk Per Trade %</span>
+              <input name="risk.risk_per_trade_pct" type="number" min="0" max="0.25" step="0.01">
+            </label>
+            <label>
+              <span>Max Daily Loss %</span>
+              <input name="risk.max_daily_loss_pct" type="number" min="0" max="1" step="0.01">
+            </label>
+            <label>
+              <span>Max Open Trades</span>
+              <input name="risk.max_open_trades" type="number" min="1" max="3" step="1">
+            </label>
+            <label>
+              <span>Max Trades Per Symbol</span>
+              <input name="risk.max_open_trades_per_symbol" type="number" min="1" step="1">
+            </label>
+            <label>
+              <span>Fast SMA</span>
+              <input name="strategy.fast_sma" type="number" min="1" step="1">
+            </label>
+            <label>
+              <span>Slow SMA</span>
+              <input name="strategy.slow_sma" type="number" min="1" step="1">
+            </label>
+            <label>
+              <span>ATR Period</span>
+              <input name="strategy.atr_period" type="number" min="1" step="1">
+            </label>
+            <label>
+              <span>ATR Stop Multiplier</span>
+              <input name="strategy.atr_stop_multiplier" type="number" min="0" step="0.1">
+            </label>
+            <label>
+              <span>Take Profit R</span>
+              <input name="strategy.take_profit_r_multiple" type="number" min="0" step="0.1">
+            </label>
+            <label>
+              <span>Max Spread Points</span>
+              <input name="strategy.max_spread_points" type="number" min="0" step="0.1">
+            </label>
+            <label>
+              <span>Market Data Provider</span>
+              <input name="market_data.provider" type="text">
+            </label>
+            <label>
+              <span>Market Data Path</span>
+              <input name="market_data.path" type="text">
+            </label>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-heading">
+            <h2>MT5</h2>
+            <div class="button-row">
+              <button type="button" id="run-once">Run One Cycle</button>
+              <button type="button" id="backtest">Backtest</button>
+            </div>
+          </div>
+
+          <div class="field-grid">
+            <label>
+              <span>MT5 Account Number</span>
+              <input name="mt5.account_number" type="number" min="1" step="1">
+            </label>
+            <label>
+              <span>Terminal Path</span>
+              <input name="mt5.terminal_path" type="text">
+            </label>
+            <label>
+              <span>Server</span>
+              <input name="mt5.server" type="text">
+            </label>
+            <label>
+              <span>Magic</span>
+              <input name="mt5.magic" type="number" min="1" step="1">
+            </label>
+            <label>
+              <span>Deviation</span>
+              <input name="mt5.deviation_points" type="number" min="1" step="1">
+            </label>
+            <label>
+              <span>Comment</span>
+              <input name="mt5.order_comment" type="text">
+            </label>
+            <label>
+              <span>Filling</span>
+              <select name="mt5.type_filling">
+                <option value="RETURN">RETURN</option>
+                <option value="IOC">IOC</option>
+                <option value="FOK">FOK</option>
+              </select>
+            </label>
+          </div>
+        </section>
+
+        <section class="panel symbols-panel">
+          <div class="panel-heading">
+            <h2>Symbols</h2>
+            <button type="button" id="add-symbol">Add Symbol</button>
+          </div>
+          <div class="symbols-table" role="table" aria-label="Symbols">
+            <div class="symbol-row symbol-head" role="row">
+              <span>Name</span>
+              <span>Point</span>
+              <span>Point Value</span>
+              <span>Min Vol</span>
+              <span>Max Vol</span>
+              <span>Step</span>
+              <span></span>
+            </div>
+            <div id="symbols-body"></div>
+          </div>
+        </section>
+
+        <section class="panel journal-panel">
+          <div class="panel-heading">
+            <h2>Journal</h2>
+            <button type="button" id="refresh-journal">Refresh</button>
+          </div>
+          <pre id="journal-entries" aria-live="polite">No journal entries</pre>
+        </section>
+      </form>
+    </main>
+  </body>
+</html>

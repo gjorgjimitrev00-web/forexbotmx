@@ -7,9 +7,14 @@ from typing import Any
 import yaml
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 
 from forexbot.config import ConfigError, load_config
 from forexbot.runtime import build_engine_from_config
+
+WEB_DIR = Path(__file__).parent / "web"
+STATIC_DIR = WEB_DIR / "static"
+TEMPLATE_DIR = WEB_DIR / "templates"
 
 
 def create_app(
@@ -18,13 +23,14 @@ def create_app(
     journal_path: Path = Path("journals/ui.jsonl"),
 ) -> FastAPI:
     app = FastAPI(title="Forexbot Control Panel")
+    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
     app.state.config_path = config_path
     app.state.journal_path = journal_path
     app.state.last_summary = None
 
     @app.get("/", response_class=HTMLResponse)
     def dashboard() -> str:
-        return "<!doctype html><html><body><h1>Forexbot</h1><div id='app'></div></body></html>"
+        return (TEMPLATE_DIR / "dashboard.html").read_text(encoding="utf-8")
 
     @app.get("/api/status")
     def status() -> dict[str, Any]:

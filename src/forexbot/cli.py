@@ -48,7 +48,7 @@ def main(argv: list[str] | None = None) -> int:
             print("run requires --once in V1")
             return 2
 
-        return _run_engine(config, "journals/paper.jsonl", "paper summary")
+        return _run_engine(config, f"journals/{config.mode}.jsonl", f"{config.mode} summary")
 
     if args.command == "backtest":
         mode_error = _mode_error(config.mode, "backtest", "backtest")

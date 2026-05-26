@@ -4,6 +4,10 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
+import forexbot.cli as cli
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SAMPLE_DATA_PATH = PROJECT_ROOT / "data" / "sample_candles.json"
@@ -98,6 +102,29 @@ def test_run_accepts_mt5_live_mode_without_v1_rejection(tmp_path):
     assert "run requires mode=paper" not in result.stdout
     assert "Traceback" not in result.stdout
     assert "Traceback" not in result.stderr
+
+
+@pytest.mark.parametrize("mode", ["mt5_demo", "mt5_live"])
+def test_run_uses_mode_specific_summary_and_journal_for_mt5_modes(tmp_path, monkeypatch, capsys, mode):
+    config_path = _write_temp_config_with_mode(tmp_path, "mt5_demo.yaml", mode)
+    captured = {}
+
+    class FakeEngine:
+        def run_once(self):
+            return {"executed": 0, "blocked": 0, "held": 0, "duplicates": 0, "errors": 0}
+
+    def fake_build_engine_from_config(config, journal_path):
+        captured["mode"] = config.mode
+        captured["journal_path"] = journal_path
+        return FakeEngine()
+
+    monkeypatch.setattr(cli, "build_engine_from_config", fake_build_engine_from_config)
+
+    result = cli.main(["run", "--config", str(config_path), "--once"])
+
+    assert result == 0
+    assert captured == {"mode": mode, "journal_path": f"journals/{mode}.jsonl"}
+    assert f"{mode} summary:" in capsys.readouterr().out
 
 
 def test_run_rejects_backtest_mode_without_traceback(tmp_path):

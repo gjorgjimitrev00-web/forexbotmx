@@ -6,6 +6,8 @@ from typing import Any
 from forexbot.models import Candle
 
 
+_MISSING = object()
+
 TIMEFRAMES = {
     "M15": "TIMEFRAME_M15",
     "H1": "TIMEFRAME_H1",
@@ -24,21 +26,29 @@ class MT5MarketDataProvider:
 
         candles: list[Candle] = []
         for row in rows:
-            time_value = row["time"] if isinstance(row, dict) else row.time
+            time_value = _row_value(row, "time")
             candles.append(
                 Candle(
                     symbol=symbol,
                     timeframe=timeframe,
                     time=datetime.fromtimestamp(int(time_value), timezone.utc),
-                    open=float(row["open"] if isinstance(row, dict) else row.open),
-                    high=float(row["high"] if isinstance(row, dict) else row.high),
-                    low=float(row["low"] if isinstance(row, dict) else row.low),
-                    close=float(row["close"] if isinstance(row, dict) else row.close),
-                    volume=float(
-                        row.get("tick_volume", row.get("volume", 0))
-                        if isinstance(row, dict)
-                        else getattr(row, "tick_volume", getattr(row, "volume", 0))
-                    ),
+                    open=float(_row_value(row, "open")),
+                    high=float(_row_value(row, "high")),
+                    low=float(_row_value(row, "low")),
+                    close=float(_row_value(row, "close")),
+                    volume=float(_row_value(row, "tick_volume", _row_value(row, "volume", 0))),
                 )
             )
         return candles
+
+
+def _row_value(row: Any, key: str, default: Any = _MISSING) -> Any:
+    if isinstance(row, dict):
+        return row.get(key, default) if default is not _MISSING else row[key]
+    try:
+        return row[key]
+    except (KeyError, TypeError, IndexError, ValueError):
+        value = getattr(row, key, default)
+        if value is _MISSING:
+            raise
+        return value

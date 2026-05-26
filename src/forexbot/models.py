@@ -75,6 +75,8 @@ class OrderResult:
     accepted: bool
     order_id: str | None
     message: str
+    retcode: int | None = None
+    deal_id: str | None = None
 
 
 def _validate_tradeable_side(side: Side) -> None:

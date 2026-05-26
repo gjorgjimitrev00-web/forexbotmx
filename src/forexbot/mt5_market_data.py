@@ -37,7 +37,7 @@ class MT5MarketDataProvider:
                     volume=float(
                         row.get("tick_volume", row.get("volume", 0))
                         if isinstance(row, dict)
-                        else getattr(row, "tick_volume", 0)
+                        else getattr(row, "tick_volume", getattr(row, "volume", 0))
                     ),
                 )
             )

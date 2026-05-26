@@ -30,6 +30,13 @@ forexbot = "forexbot.cli:main"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+forexbot = [
+    "web/templates/*.html",
+    "web/static/*.css",
+    "web/static/*.js",
+]
+
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]

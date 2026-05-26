@@ -159,11 +159,23 @@ function setBusy(isBusy) {
   }
 }
 
+function formatSummary(summary) {
+  if (!summary) {
+    return "No cycle run yet";
+  }
+  if (typeof summary === "string") {
+    return summary;
+  }
+  return Object.entries(summary)
+    .map(([key, value]) => `${key}: ${value}`)
+    .join(", ");
+}
+
 async function refreshStatus() {
   const status = await requestJson("/api/status");
   document.querySelector("#status-mode").textContent = status.mode || "--";
   document.querySelector("#status-host").textContent = status.host || "--";
-  document.querySelector("#status-summary").textContent = status.last_summary || "No cycle run yet";
+  document.querySelector("#status-summary").textContent = formatSummary(status.last_summary);
 }
 
 async function refreshJournal() {

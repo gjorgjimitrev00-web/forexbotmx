@@ -1,4 +1,5 @@
 from pathlib import Path
+import tomllib
 
 from fastapi.testclient import TestClient
 
@@ -28,6 +29,23 @@ def test_dashboard_contains_control_panel_sections(tmp_path):
     assert "Symbols" in body
     assert "Run One Cycle" in body
     assert "MT5 Live" in body
+
+
+def test_web_assets_are_declared_for_wheel_package():
+    pyproject = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))
+
+    package_data = pyproject["tool"]["setuptools"]["package-data"]["forexbot"]
+
+    assert "web/templates/*.html" in package_data
+    assert "web/static/*.css" in package_data
+    assert "web/static/*.js" in package_data
+
+
+def test_dashboard_script_formats_summary_objects():
+    script = Path("src/forexbot/web/static/app.js").read_text(encoding="utf-8")
+
+    assert "function formatSummary" in script
+    assert "formatSummary(status.last_summary)" in script
 
 
 def test_check_config_endpoint(tmp_path):

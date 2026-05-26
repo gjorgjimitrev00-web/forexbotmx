@@ -17,6 +17,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+    "httpx>=0.28",
     "pytest>=8.0",
 ]
 mt5 = [

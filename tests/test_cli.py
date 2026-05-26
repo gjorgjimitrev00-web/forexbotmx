@@ -2,6 +2,7 @@ import json
 import os
 import subprocess
 import sys
+import types
 from pathlib import Path
 
 import pytest
@@ -193,3 +194,33 @@ def test_run_fails_when_engine_summary_has_symbol_errors(tmp_path):
     assert "'errors':" in result.stdout
     assert "Traceback" not in result.stdout
     assert "Traceback" not in result.stderr
+
+
+def test_ui_command_rejects_non_local_host_without_starting_server(tmp_path, monkeypatch, capsys):
+    config_path = _write_temp_config(tmp_path, "paper.yaml")
+    uvicorn = types.SimpleNamespace(run=lambda *args, **kwargs: pytest.fail("uvicorn should not start"))
+    monkeypatch.setitem(sys.modules, "uvicorn", uvicorn)
+
+    result = cli.main(["ui", "--config", str(config_path), "--host", "0.0.0.0"])
+
+    assert result == 2
+    assert "ui host must be 127.0.0.1 or localhost" in capsys.readouterr().out
+
+
+def test_ui_command_starts_uvicorn_for_localhost(tmp_path, monkeypatch):
+    config_path = _write_temp_config(tmp_path, "paper.yaml")
+    captured = {}
+
+    def fake_run(app, *, host, port):
+        captured["app"] = app
+        captured["host"] = host
+        captured["port"] = port
+
+    monkeypatch.setitem(sys.modules, "uvicorn", types.SimpleNamespace(run=fake_run))
+
+    result = cli.main(["ui", "--config", str(config_path), "--host", "localhost", "--port", "8765"])
+
+    assert result == 0
+    assert captured["host"] == "localhost"
+    assert captured["port"] == 8765
+    assert captured["app"].state.config_path == config_path

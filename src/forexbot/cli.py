@@ -21,12 +21,21 @@ def build_parser() -> argparse.ArgumentParser:
     backtest = subparsers.add_parser("backtest", help="Run a deterministic local backtest.")
     backtest.add_argument("--config", required=True)
 
+    ui = subparsers.add_parser("ui", help="Run the local-only control panel.")
+    ui.add_argument("--config", required=True)
+    ui.add_argument("--host", default="127.0.0.1")
+    ui.add_argument("--port", type=int, default=8765)
+
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
+
+    if args.command == "ui" and args.host not in {"127.0.0.1", "localhost"}:
+        print("ui host must be 127.0.0.1 or localhost")
+        return 2
 
     try:
         config = load_config(Path(args.config))
@@ -57,6 +66,14 @@ def main(argv: list[str] | None = None) -> int:
             return 2
 
         return _run_engine(config, "journals/backtest.jsonl", "backtest summary")
+
+    if args.command == "ui":
+        from forexbot.ui import create_app
+        import uvicorn
+
+        app = create_app(config_path=Path(args.config))
+        uvicorn.run(app, host=args.host, port=args.port)
+        return 0
 
     return 0
 

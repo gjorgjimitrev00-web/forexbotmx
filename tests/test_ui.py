@@ -25,6 +25,19 @@ def test_check_config_endpoint(tmp_path):
     assert response.json()["ok"] is True
 
 
+def test_invalid_config_save_preserves_existing_file(tmp_path):
+    config_path = tmp_path / "paper.yaml"
+    original = Path("configs/paper.yaml").read_text(encoding="utf-8")
+    config_path.write_text(original, encoding="utf-8")
+    app = create_app(config_path=config_path, journal_path=tmp_path / "ui.jsonl")
+    client = TestClient(app)
+
+    response = client.post("/api/config", json={"mode": "paper"})
+
+    assert response.status_code == 400
+    assert config_path.read_text(encoding="utf-8") == original
+
+
 def test_run_once_endpoint_returns_summary(tmp_path):
     app = create_app(config_path=Path("configs/paper.yaml"), journal_path=tmp_path / "ui.jsonl")
     client = TestClient(app)

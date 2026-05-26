@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 from typing import Any
 
 import yaml
@@ -36,11 +37,24 @@ def create_app(
 
     @app.post("/api/config")
     def save_config(payload: dict[str, Any]) -> dict[str, Any]:
-        app.state.config_path.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
+        config_text = yaml.safe_dump(payload, sort_keys=False)
+        config_path = app.state.config_path
+        config_path.parent.mkdir(parents=True, exist_ok=True)
+        with NamedTemporaryFile(
+            "w",
+            delete=False,
+            dir=config_path.parent,
+            encoding="utf-8",
+            suffix=".tmp",
+        ) as temp_file:
+            temp_file.write(config_text)
+            temp_path = Path(temp_file.name)
         try:
-            load_config(app.state.config_path)
+            load_config(temp_path)
         except ConfigError as exc:
+            temp_path.unlink(missing_ok=True)
             raise HTTPException(status_code=400, detail=str(exc)) from exc
+        temp_path.replace(config_path)
         return {"ok": True}
 
     @app.post("/api/check-config")

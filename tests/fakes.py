@@ -15,6 +15,7 @@ class FakeMT5:
     def __init__(self) -> None:
         self.sent_requests = []
         self.checked_requests = []
+        self.shutdown_calls = 0
         self.initialize_result = True
         self.account = SimpleNamespace(login=12345678, equity=10000.0, balance=10000.0, trade_allowed=True)
         self.terminal = SimpleNamespace(trade_allowed=True)
@@ -25,6 +26,9 @@ class FakeMT5:
 
     def initialize(self, *args, **kwargs):
         return self.initialize_result
+
+    def shutdown(self):
+        self.shutdown_calls += 1
 
     def last_error(self):
         return (1, "fake error")

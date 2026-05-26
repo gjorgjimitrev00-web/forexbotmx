@@ -125,6 +125,8 @@ def test_live_account_mismatch_blocks_execution(fake_mt5_module):
     broker = MT5Broker(mt5_config(account_number=999), mode="mt5_live", mt5_module=fake_mt5_module)
     with pytest.raises(MT5SetupError, match="account"):
         broker.connect()
+    assert fake_mt5_module.shutdown_calls == 1
+    assert broker.connected is False
 
 
 def test_order_check_failure_blocks_order_send(fake_mt5_module):

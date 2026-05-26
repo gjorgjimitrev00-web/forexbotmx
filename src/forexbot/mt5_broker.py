@@ -44,25 +44,26 @@ class MT5Broker:
             self._mt5 = None
             raise MT5SetupError(f"MT5 initialize failed: {mt5.last_error()}")
 
+        def fail_after_initialize(message: str) -> None:
+            self._mt5 = None
+            mt5.shutdown()
+            raise MT5SetupError(message)
+
         account = mt5.account_info()
         if account is None:
-            self._mt5 = None
-            raise MT5SetupError(f"MT5 account_info failed: {mt5.last_error()}")
+            fail_after_initialize(f"MT5 account_info failed: {mt5.last_error()}")
 
         if self.config is not None and account.login != self.config.account_number:
-            self._mt5 = None
-            raise MT5SetupError(
+            fail_after_initialize(
                 f"MT5 account mismatch: connected account {account.login}, expected {self.config.account_number}"
             )
 
         if getattr(account, "trade_allowed", True) is False:
-            self._mt5 = None
-            raise MT5SetupError("MT5 account trading is not allowed.")
+            fail_after_initialize("MT5 account trading is not allowed.")
 
         terminal = mt5.terminal_info()
         if terminal is not None and getattr(terminal, "trade_allowed", True) is False:
-            self._mt5 = None
-            raise MT5SetupError("MT5 terminal trading is not allowed.")
+            fail_after_initialize("MT5 terminal trading is not allowed.")
 
         self._mt5 = mt5
         self.connected = True

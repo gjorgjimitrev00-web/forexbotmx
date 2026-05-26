@@ -25,6 +25,7 @@ class MT5Broker:
 
     def connect(self) -> None:
         mt5 = self._mt5
+        had_initialized_session = self.connected and mt5 is not None
         self.connected = False
 
         if mt5 is None:
@@ -41,6 +42,8 @@ class MT5Broker:
             initialize_kwargs["path"] = str(self.config.terminal_path)
 
         if not mt5.initialize(**initialize_kwargs):
+            if had_initialized_session:
+                mt5.shutdown()
             self._mt5 = None
             raise MT5SetupError(f"MT5 initialize failed: {mt5.last_error()}")
 

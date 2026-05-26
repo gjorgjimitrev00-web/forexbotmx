@@ -87,11 +87,15 @@ def test_failed_reconnect_clears_previous_mt5_state(monkeypatch):
     class FakeMT5:
         def __init__(self) -> None:
             self.initialize_results = [True, False]
+            self.shutdown_calls = 0
             self.account = SimpleNamespace(login=12345678, equity=10000.0, balance=10000.0, trade_allowed=True)
             self.terminal = SimpleNamespace(trade_allowed=True)
 
         def initialize(self):
             return self.initialize_results.pop(0)
+
+        def shutdown(self):
+            self.shutdown_calls += 1
 
         def last_error(self):
             return (1, "failed reconnect")
@@ -119,6 +123,7 @@ def test_failed_reconnect_clears_previous_mt5_state(monkeypatch):
 
     assert broker.connected is False
     assert broker._mt5 is None
+    assert fake_mt5.shutdown_calls == 1
 
 
 def test_live_account_mismatch_blocks_execution(fake_mt5_module):

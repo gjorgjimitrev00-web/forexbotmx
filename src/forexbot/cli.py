@@ -3,13 +3,8 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from forexbot.broker import PaperBroker
 from forexbot.config import BotConfig, ConfigError, load_config
-from forexbot.engine import TradingEngine
-from forexbot.journal import JsonlJournal
-from forexbot.market_data import JsonMarketDataProvider
-from forexbot.risk import RiskManager
-from forexbot.strategy import TrendFollowingStrategy
+from forexbot.runtime import build_engine_from_config
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -44,7 +39,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.command == "run":
-        mode_error = _mode_error(config.mode, "run", "paper")
+        mode_error = _mode_error(config.mode, "run", {"paper", "mt5_demo", "mt5_live"})
         if mode_error is not None:
             print(mode_error)
             return 2
@@ -66,18 +61,18 @@ def main(argv: list[str] | None = None) -> int:
     return 0
 
 
-def _mode_error(mode: str, command: str, required_mode: str) -> str | None:
-    if mode == required_mode:
+def _mode_error(mode: str, command: str, required_modes: str | set[str]) -> str | None:
+    allowed = {required_modes} if isinstance(required_modes, str) else required_modes
+    if mode in allowed:
         return None
-    if mode == "mt5_demo":
-        return f"{command} mode=mt5_demo is unsupported: MT5 demo execution is disabled in V1"
-    return f"{command} requires mode={required_mode}; got mode={mode}"
+    required = _format_required_modes(allowed)
+    return f"{command} requires mode={required}; got mode={mode}"
 
 
 def _run_engine(config: BotConfig, journal_path: str, summary_label: str) -> int:
     try:
-        summary = _build_engine(config, journal_path).run_once()
-    except (OSError, KeyError, ValueError) as exc:
+        summary = build_engine_from_config(config, journal_path).run_once()
+    except (OSError, KeyError, RuntimeError, ValueError) as exc:
         print(f"runtime error: {exc}")
         return 1
 
@@ -87,16 +82,8 @@ def _run_engine(config: BotConfig, journal_path: str, summary_label: str) -> int
     return 0
 
 
-def _build_engine(config: BotConfig, journal_path: str) -> TradingEngine:
-    return TradingEngine(
-        symbols=tuple(config.symbols),
-        market_data=JsonMarketDataProvider(config.market_data.path),
-        strategy=TrendFollowingStrategy(config.strategy),
-        risk_manager=RiskManager(config.risk),
-        broker=PaperBroker(config.account.starting_equity),
-        journal=JsonlJournal(journal_path),
-        spread_points={
-            symbol.name: min(config.strategy.max_spread_points, 10)
-            for symbol in config.symbols
-        },
-    )
+def _format_required_modes(modes: set[str]) -> str:
+    ordered = [mode for mode in ("paper", "backtest", "mt5_demo", "mt5_live") if mode in modes]
+    if len(ordered) == 1:
+        return ordered[0]
+    return f"{', '.join(ordered[:-1])}, or {ordered[-1]}"

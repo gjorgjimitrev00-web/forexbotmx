@@ -23,6 +23,10 @@ class MT5Broker:
         self.connected = False
         self._mt5 = mt5_module
 
+    @property
+    def mt5_module(self) -> Any:
+        return self._mt5
+
     def connect(self) -> None:
         mt5 = self._mt5
         had_initialized_session = self.connected and mt5 is not None

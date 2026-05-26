@@ -2,6 +2,8 @@ from types import SimpleNamespace
 
 
 class FakeMT5:
+    TIMEFRAME_M15 = 15
+    TIMEFRAME_H1 = 60
     TRADE_ACTION_DEAL = 1
     ORDER_TYPE_BUY = 0
     ORDER_TYPE_SELL = 1
@@ -23,6 +25,10 @@ class FakeMT5:
         self.symbol = SimpleNamespace(name="EURUSD", visible=True, point=0.0001)
         self.check_result = SimpleNamespace(retcode=self.TRADE_RETCODE_DONE, comment="check ok")
         self.send_result = SimpleNamespace(retcode=self.TRADE_RETCODE_DONE, order=111, deal=222, comment="done")
+        self.rates = {
+            self.TIMEFRAME_M15: self._rate_rows(),
+            self.TIMEFRAME_H1: self._rate_rows(),
+        }
 
     def initialize(self, *args, **kwargs):
         return self.initialize_result
@@ -58,3 +64,22 @@ class FakeMT5:
     def order_send(self, request):
         self.sent_requests.append(request)
         return self.send_result
+
+    def copy_rates_from_pos(self, symbol, timeframe, start_pos, count):
+        if symbol != "EURUSD":
+            return None
+        return self.rates.get(timeframe, [])[start_pos : start_pos + count]
+
+    def _rate_rows(self):
+        base_time = 1_779_292_800
+        return [
+            {
+                "time": base_time + index * 900,
+                "open": 1.1000 + index * 0.0001,
+                "high": 1.1010 + index * 0.0001,
+                "low": 1.0990 + index * 0.0001,
+                "close": 1.1005 + index * 0.0001,
+                "tick_volume": 100 + index,
+            }
+            for index in range(60)
+        ]

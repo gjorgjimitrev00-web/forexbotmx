@@ -74,13 +74,28 @@ def test_run_once_command_succeeds(tmp_path):
     assert (tmp_path / "journals" / "paper.jsonl").exists()
 
 
-def test_run_rejects_mt5_demo_mode_without_traceback(tmp_path):
-    config_path = _write_temp_config_with_mode(tmp_path, "paper.yaml", "mt5_demo")
+def test_run_accepts_mt5_demo_mode_without_v1_rejection(tmp_path):
+    config_path = _write_temp_config(tmp_path, "mt5_demo.yaml")
 
     result = _run_cli(["run", "--config", str(config_path), "--once"], tmp_path)
 
     assert result.returncode != 0
-    assert "MT5 demo execution is disabled in V1" in result.stdout
+    assert "runtime error:" in result.stdout
+    assert "MT5 demo execution is disabled in V1" not in result.stdout
+    assert "run requires mode=paper" not in result.stdout
+    assert "Traceback" not in result.stdout
+    assert "Traceback" not in result.stderr
+
+
+def test_run_accepts_mt5_live_mode_without_v1_rejection(tmp_path):
+    config_path = _write_temp_config_with_mode(tmp_path, "mt5_demo.yaml", "mt5_live")
+
+    result = _run_cli(["run", "--config", str(config_path), "--once"], tmp_path)
+
+    assert result.returncode != 0
+    assert "runtime error:" in result.stdout
+    assert "MT5 demo execution is disabled in V1" not in result.stdout
+    assert "run requires mode=paper" not in result.stdout
     assert "Traceback" not in result.stdout
     assert "Traceback" not in result.stderr
 
@@ -91,7 +106,7 @@ def test_run_rejects_backtest_mode_without_traceback(tmp_path):
     result = _run_cli(["run", "--config", str(config_path), "--once"], tmp_path)
 
     assert result.returncode != 0
-    assert "run requires mode=paper" in result.stdout
+    assert "run requires mode=paper, mt5_demo, or mt5_live" in result.stdout
     assert "Traceback" not in result.stdout
     assert "Traceback" not in result.stderr
 
@@ -107,12 +122,12 @@ def test_backtest_command_succeeds(tmp_path):
 
 
 def test_backtest_rejects_mt5_demo_mode_without_traceback(tmp_path):
-    config_path = _write_temp_config_with_mode(tmp_path, "backtest.yaml", "mt5_demo")
+    config_path = _write_temp_config(tmp_path, "mt5_demo.yaml")
 
     result = _run_cli(["backtest", "--config", str(config_path)], tmp_path)
 
     assert result.returncode != 0
-    assert "MT5 demo execution is disabled in V1" in result.stdout
+    assert "backtest requires mode=backtest; got mode=mt5_demo" in result.stdout
     assert "Traceback" not in result.stdout
     assert "Traceback" not in result.stderr
 
